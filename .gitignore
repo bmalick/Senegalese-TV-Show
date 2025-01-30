@@ -1,4 +1,4 @@
 __pycache__
 *.mp3
 *.txt
-data/
+/data
