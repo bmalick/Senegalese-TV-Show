@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser
 import yt_dlp
 
-def download_playlist(name, playlist_url, download_type, base_dir="data"):
+def download_playlist(name, playlist_url, download_type, base_dir="data", cookies_file=None):
     save_dir = os.path.join(base_dir, name)
     os.makedirs(base_dir, exist_ok=True)
     # Set download options based on the type (audio or video)
@@ -26,6 +26,9 @@ def download_playlist(name, playlist_url, download_type, base_dir="data"):
         }
     else:
         raise ValueError("Invalid download type. Choose either 'audio' or 'video'.")
+
+    if cookies_file:
+        ydl_opts["cookiefile"] = cookies_file
 
     # Download the playlist
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
