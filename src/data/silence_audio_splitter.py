@@ -7,9 +7,10 @@ from pydub.silence import split_on_silence
 from tqdm import tqdm
 
 class SilenceAudioSplitter:
-    def __init__(self, min_silence_len:int = 2000, silence_thresh:int = -210):
+    def __init__(self, min_silence_len:int = 2000, silence_thresh:int = -210, normalization_dBFS = -20):
         self.min_silence_len = min_silence_len
         self.silence_thresh = silence_thresh
+        self.normalization_dBFS = normalization_dBFS
     
     # Define a function to normalize a chunk to a target amplitude.
     def match_target_amplitude(self, aChunk, target_dBFS):
@@ -26,9 +27,8 @@ class SilenceAudioSplitter:
         elif str(audio_path).endswith('.wav'):
             audio = AudioSegment.from_wav(audio_path)
 
-        print(len(audio))
-        # Split track where the silence is 2 seconds or more and get chunks using 
-        # the imported function.
+        audio = self.match_target_amplitude(audio, self.normalization_dBFS)
+
         chunks = split_on_silence (
             # Use the loaded audio.
             audio, 
@@ -42,24 +42,30 @@ class SilenceAudioSplitter:
         chunk_lists = []
 
         # Process each chunk with your parameters
-        for i, chunk in tqdm(enumerate(chunks)):
+        i = 0
+        for chunk in tqdm(chunks):
             # Create a silence chunk that's 0.5 seconds (or 500 ms) long for padding.
             silence_chunk = AudioSegment.silent(duration=500)
 
             # Add the padding chunk to beginning and end of the entire chunk.
             audio_chunk = silence_chunk + chunk + silence_chunk
 
-            # Normalize the entire chunk.
-            normalized_chunk = self.match_target_amplitude(audio_chunk, -20.0)
+            # Keep only the audios longer than 1,5 seconds (we assumes that saying a word should take longer)
+            # Mind reconsidering it and adjust it
+            if len(audio_chunk) > 1500:
+                # Normalize the entire chunk.
+                normalized_chunk = self.match_target_amplitude(audio_chunk, -20.0)
 
-            # Export the audio chunk with new bitrate.
-            print(f"Exporting {audio_name}_chunk_{i}.mp3")
-            normalized_chunk.export(
-                os.path.join(save_path, f"{audio_name}_chunk_{i}.mp3"),
-                bitrate = "192k",
-                format = "mp3"
-            )
+                # Export the audio chunk with new bitrate.
+                # print(f"Exporting {audio_name}_chunk_{i}.mp3")
+                normalized_chunk.export(
+                    os.path.join(save_path, f"{audio_name}_chunk_{i}.mp3"),
+                    bitrate = "192k",
+                    format = "mp3"
+                )
 
-            chunk_lists.append(f"{audio_name}_chunk_{i}.mp3")
+                chunk_lists.append(f"{audio_name}_chunk_{i}.mp3")
+
+                i += 1
 
         return chunk_lists
